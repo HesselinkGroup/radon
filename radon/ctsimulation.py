@@ -49,6 +49,8 @@ def filtered_backproject(sinogram, angles, center=None):
     dc_sinogram = np.mean(sinogram.sum(0))
     dc_zz = zz.sum()
     zz += (dc_sinogram - dc_zz) / zz.size
+
+    zz[(xx-x0)**2 + (yy-x0)**2 > x0**2] = 0.0
     
     return zz
 
