@@ -32,10 +32,21 @@ def backproject(sinogram, angle_rad, center=None):
     return backprop
 
 
-def filtered_backproject(sinogram, angles, center=None):
+def filtered_backproject(sinogram, angles, center=None, npad=0):
+
+    if npad:
+        sinogram = np.pad(sinogram, ((npad,0),(0,0)), 'constant')
+
     fradon = np.fft.fft(sinogram, axis=0)
     freqs = np.fft.fftfreq(sinogram.shape[0])
-    sinogram_sharp = np.fft.ifft(np.abs(freqs)[:,np.newaxis] * fradon, axis=0)
+
+    freq_filter = np.abs(freqs)
+
+    sinogram_sharp = np.fft.ifft(freq_filter[:,np.newaxis] * fradon, axis=0)
+
+    if npad:
+        sinogram_sharp = sinogram_sharp[npad:,:]
+
     zz = backproject(sinogram_sharp.real, angles, center=center) * np.pi / len(angles)
 
     # Chop off the corners (pie are round, cornbread are square)
@@ -51,6 +62,8 @@ def filtered_backproject(sinogram, angles, center=None):
     zz += (dc_sinogram - dc_zz) / zz.size
 
     zz[(xx-x0)**2 + (yy-x0)**2 > x0**2] = 0.0
+
+    # zz = zz[npad:-npad, npad:-npad]
     
     return zz
 
