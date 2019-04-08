@@ -1,5 +1,6 @@
 import numpy as np
 import skimage
+import enum
 
 def radon(img, angle_rad, center=None):
 
@@ -32,6 +33,10 @@ def backproject(sinogram, angle_rad, center=None):
     return backprop
 
 
+class FBPFilter(enum.Enum):
+    NoFilter = 0
+    CosineFilter = 1
+
 def filtered_backproject(sinogram, angles, center=None, npad=0):
 
     if npad:
@@ -40,7 +45,18 @@ def filtered_backproject(sinogram, angles, center=None, npad=0):
     fradon = np.fft.fft(sinogram, axis=0)
     freqs = np.fft.fftfreq(sinogram.shape[0])
 
+
+    filter_type = FBPFilter.CosineFilter
+
     freq_filter = np.abs(freqs)
+    if filter_type == FBPFilter.NoFilter:
+        pass
+    elif filter_type == FBPFilter.CosineFilter: # 
+        freq_filter *= 0.5*(1 + np.cos(2*np.pi*freqs))
+        # freq_filter = np.cos(2*np.pi*freqs)
+        # import matplotlib.pyplot as plt
+        # plt.plot(freqs, freq_filter, '.')
+        # raise Exception("Damn!")
 
     sinogram_sharp = np.fft.ifft(freq_filter[:,np.newaxis] * fradon, axis=0)
 
@@ -68,18 +84,18 @@ def filtered_backproject(sinogram, angles, center=None, npad=0):
     return zz
 
 
-
-def detector_value(num_photons, num_bits, peak_num_photons, clip=True):
+def detector_value(intensity, num_bits, flood_intensity, clip=True):
     """
     Simulation of detector value.
     
     Parameters:
-        num_photons: array-like
-            actual number of photons hitting detector
+        intensity: array-like
+            actual energy hitting detector
         num_bits: integer
             bit depth of detector output
-        peak_num_photons: scalar
-            number of photons corresponding to highest detector output (2**num_bits - 1).
+        flood_intensity: scalar
+            energy corresponding to highest detector output (2**num_bits - 1).
+            Set by flood calibration; set here at your discretion.
     
     Returns:
         x: array-like
@@ -90,12 +106,50 @@ def detector_value(num_photons, num_bits, peak_num_photons, clip=True):
     
     x_max = 2**num_bits - 1
 
-    x = (num_photons/(peak_num_photons+1)*(x_max+1)).astype(int)
+    # In terms of photons, my first implementation was careful to fill up
+    # the bit levels:
+    #     x = (num_photons/(peak_num_photons+1)*(x_max+1)).astype(int)
+    # TODO: make sure intensity fills up bit levels nicely.
+    x = ((intensity/flood_intensity)*x_max).astype(int)
     
     if clip:
         x = np.minimum(x_max, x)
     
     return x
+
+
+# === Here is my photon implementation.  There are some details I have forgotten
+# exactly how to explain.  x = num_photons/(peak_num_photons+1) ... is a weird
+# one.  I think I did this to use up the bits efficiently.
+# 
+
+# def detector_value(num_photons, num_bits, peak_num_photons, clip=True):
+#     """
+#     Simulation of detector value.
+    
+#     Parameters:
+#         num_photons: array-like
+#             actual number of photons hitting detector
+#         num_bits: integer
+#             bit depth of detector output
+#         peak_num_photons: scalar
+#             number of photons corresponding to highest detector output (2**num_bits - 1).
+    
+#     Returns:
+#         x: array-like
+#             detector output, quantized in [0, 2**num_bits-1], clipped at the top
+        
+#     TODO: Dark current (should it go here?)
+#     """
+    
+#     x_max = 2**num_bits - 1
+
+#     x = (num_photons/(peak_num_photons+1)*(x_max+1)).astype(int)
+    
+#     if clip:
+#         x = np.minimum(x_max, x)
+    
+#     return x
 
 
 def log_transform_quantized(x, num_bits):

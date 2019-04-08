@@ -3,7 +3,9 @@ from . import ctsimulation
 
 
 def radon(img, angle_rad, center=None):
-
+    """
+    Calculate Radon transform of stack of images.
+    """
     if img.ndim < 3:
         raise Exception("img must have shape (num_energies, n, n)")
 
@@ -21,7 +23,7 @@ def radon(img, angle_rad, center=None):
 
 
 def _general_backproject(fun, sinogram, angle_rad, center=None):
-
+    
     if sinogram.ndim < 3:
         raise Exception("sinogram must have shape (num_energies, n, num_angles)")
 
