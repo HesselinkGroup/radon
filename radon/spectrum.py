@@ -2,9 +2,10 @@
 Simulate X-ray spectrum with beam hardening layers.
 """
 
+import os
 import numpy as np
 from xraymaterials import Material
-
+from . import resources
 
 class Spectrum:
     """
@@ -179,7 +180,7 @@ def make_standard_source():
     silicon = Material.from_element("Si")
     beryllium = Material.from_element("Be")
     
-    src = Spectrum.from_photon_file("180kVp_02042018.txt")
+    src = Spectrum.from_photon_file(os.path.join(resources.res_path(), "180kVp_02042018.txt"))
     
     # I have to do the gratings by hand... I didn't make a good enough API yet.
     mu_au = gold.mu(src.keV)
