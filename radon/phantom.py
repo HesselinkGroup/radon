@@ -4,7 +4,7 @@ class Phantom:
     """
     Polyenergetic two-dimensional x-ray phantom.  It knows its pixel coordinates and can add ellipses.
     """
-    def __init__(self, xs, ys, num_energies):
+    def __init__(self, xs, ys, num_energies=1):
         nx = len(xs)
         ny = len(ys)
         self.x = xs
@@ -18,7 +18,7 @@ class Phantom:
     
     def _standardize_mu(self, mu):
         if np.isscalar(mu):
-            mu = np.full((num_energies), mu)
+            mu = np.full((self.num_energies), mu)
         elif len(mu) != self.num_energies:
             raise Exception(f"mu must be a scalar or {self.num_energies}-element array for this {self.num_energies}-energy phantom.")
         return mu
