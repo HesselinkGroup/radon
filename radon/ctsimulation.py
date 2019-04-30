@@ -3,7 +3,16 @@ import skimage
 import enum
 
 def radon(img, angle_rad, center=None):
+    """
+    Calculate Radon transform of image.
+        
+    Args:
+        img:       image to transform; must be square
+        angle_rad: list of angles, or an angle
 
+    Returns:
+        sinogram (np.array): Radon transform of img, indexed [r, angle]
+    """
     # Rotation of zero means no rotation.
     # The projection direction then is along columns, i.e. axis=0.
     # So, the size of the sinogram is (img.shape[1], len(angle_rad)).
@@ -22,15 +31,25 @@ def radon(img, angle_rad, center=None):
     return sinogram
 
 def backproject(sinogram, angle_rad, center=None):
-    
+    """Backproject sinogram
+
+    Simple backprojection without filtering.
+
+    Args:
+        sinogram:  sinogram image to backproject, indexed [r, angle]
+        angle_rad: list of projection angles
+
+    Returns:
+        img:       backprojected image
+    """
     img_shape = (sinogram.shape[0], sinogram.shape[0])
 
-    backprop = np.zeros(img_shape)
+    img = np.zeros(img_shape)
     
     for ii, aa in enumerate(angle_rad):
-        backprop += skimage.transform.rotate(np.broadcast_to(sinogram[:,ii], img_shape), -aa, center=center)
+        img += skimage.transform.rotate(np.broadcast_to(sinogram[:,ii], img_shape), -aa, center=center)
 
-    return backprop
+    return img
 
 
 class FBPFilter(enum.Enum):
