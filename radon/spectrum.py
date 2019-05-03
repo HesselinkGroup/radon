@@ -89,52 +89,87 @@ class Spectrum:
         intensity = num_photons * keV
         return cls(keV, intensity)
     
-    def intensity(self, energy_keV=None):
+    def intensity(self, energy_keV=None, photons_per_ray=None):
         """
         Calculate intensity after transmission through material layers.
         
         Parameters:
-            energy_keV: array of energies (keV) (optional)
+            energy_keV: array of photon energies (keV) (optional)
         
         Returns:
             transmitted intensity
         """
         intensity = self.src_intensity * self.attenuation
+
+        if photons_per_ray is not None:
+            total_intensity = np.trapz(intensity, self.keV)
+            intensity = photons_per_ray * intensity / total_intensity
         
         if energy_keV is not None:
             intensity = np.interp(energy_keV, self.keV, intensity)
-        
+
         return intensity
-    
-    def binned_intensity(self, min_keV, max_keV, num_bins, op=None):
-        """
-        Calculate intensity after transmission through material layers, summed into bins by energy.
+
+    def binned_intensity(self, min_keV, max_keV, num_bins, photons_per_ray=None):
+        """Calculate intensity after transmission through material layers, summed into bins by energy.
         
-        Parameters:
+        Args:
             min_keV:   lowest energy of interest
             max_keV:   highest energy of interest
             num_bins:  number of equal-length energy bins
-            op:        (optional) operation to perform on each bin.
-                       Default is summation with np.sum.
-                       Consider also trying np.mean.
+            photons_per_ray: (optional) 
         
         Returns:
-            intensity_binned: summed intensity in each bin
-            center_keV:       energy at the center of each bin
+            np.ndarray: summed intensity in each bin
+            np.ndarray: energy at the center of each bin
         """
-        
-        if op is None:
-            op = np.sum
         
         intensity = self.src_intensity * self.attenuation
         
         bins = np.linspace(min_keV, max_keV, num_bins+1)
         inds = np.digitize(self.keV, bins)
-        intensity_binned = np.array([op(intensity[inds==idx]) for idx in range(1,num_bins+1)])
+        intensity_binned = np.array([np.mean(intensity[inds==idx]) for idx in range(1,num_bins+1)])
         
         center_keV = 0.5*(bins[1:] + bins[:-1])
+
+        if photons_per_ray is not None:
+            delta_e = np.gradient(center_keV)
+            total_intensity = np.sum(intensity_binned * delta_e)
+
+            nphot_binned = intensity_binned * delta_e / center_keV
+            intensity_binned = photons_per_ray * nphot_binned * center_keV / np.sum(nphot_binned)
         
         return intensity_binned, center_keV
+
+    # def binned_intensity(self, min_keV, max_keV, num_bins, op=None):
+    #     """
+    #     Calculate intensity after transmission through material layers, summed into bins by energy.
+        
+    #     Parameters:
+    #         min_keV:   lowest energy of interest
+    #         max_keV:   highest energy of interest
+    #         num_bins:  number of equal-length energy bins
+    #         op:        (optional) operation to perform on each bin.
+    #                    Default is summation with np.sum.
+    #                    Consider also trying np.mean.
+        
+    #     Returns:
+    #         intensity_binned: summed intensity in each bin
+    #         center_keV:       energy at the center of each bin
+    #     """
+        
+    #     if op is None:
+    #         op = np.sum
+        
+    #     intensity = self.src_intensity * self.attenuation
+        
+    #     bins = np.linspace(min_keV, max_keV, num_bins+1)
+    #     inds = np.digitize(self.keV, bins)
+    #     intensity_binned = np.array([op(intensity[inds==idx]) for idx in range(1,num_bins+1)])
+        
+    #     center_keV = 0.5*(bins[1:] + bins[:-1])
+        
+    #     return intensity_binned, center_keV
         
 
 def make_standard_source():
@@ -215,7 +250,6 @@ def make_standard_source():
     
     return src
 
-
 def create_linearization_table(material, src_keV, src_intensity, design_keV):
     mu = material.mu(src_keV)
     design_mu = material.mu(design_keV)
@@ -233,10 +267,16 @@ def create_linearization_table(material, src_keV, src_intensity, design_keV):
     
     return atten_poly, atten_mono, thickness_cm
 
+def create_linearization_correction(material, src_keV, src_intensity, design_keV):
+    poly_attenuation, mono_attenuation, thickness_cm = create_linearization_table(material, src_keV, src_intensity, design_keV)
 
-
-
-
+    def correct_p(p):
+        z = np.exp(-p)
+        z_corrected = np.interp(z, poly_attenuation, mono_attenuation)
+        p_corrected = -np.log(z_corrected)
+        return p_corrected
+    
+    return correct_p
 
 
 
