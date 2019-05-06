@@ -46,7 +46,6 @@ def backproject(sinogram, angle_rad, center=None):
 def filtered_backproject(sinogram, angle_rad, center=None):
     return _general_backproject(ctsimulation.filtered_backproject, sinogram, angle_rad, center)
 
-
 def poly_sinogram(sinograms, src_intensity_per_bin_keV, src_keV, poisson=False, quantization_bits=None, min_energy_keV=None):
     """Calculate polyenergetic sinogram from monoenergetic sinograms in several energy intervals.
     
@@ -56,7 +55,7 @@ def poly_sinogram(sinograms, src_intensity_per_bin_keV, src_keV, poisson=False, 
         src_keV: center of each energy bin
         poisson (bool): whether to generate photon Poisson noise
         quantization_bits: (optional) number of bits for simulated detector quantization (default: no quantization)
-        min_energy_keV: (optional) clipping value for sinogram (default: 0.1*src_keV[0], i.e. a tenth of a photon)
+        min_energy_keV: (optional) clipping value for sinogram (default: 1e-3*src_keV[0], i.e. a thousandth of a photon)
     
     Returns:
         np.ndarray: polyenergetic sinogram (unitless)
@@ -81,7 +80,7 @@ def poly_sinogram(sinograms, src_intensity_per_bin_keV, src_keV, poisson=False, 
     flood_total_energy_keV = np.sum(src_num_photons_per_bin * src_keV) # YES
     
     if min_energy_keV is None:
-        min_energy_keV = 0.1*src_keV[0]
+        min_energy_keV = 1e-3*src_keV[0]
     poly_sinogram = np.log(flood_total_energy_keV) - np.log(np.maximum(observed_total_energy_keV, min_energy_keV))
     
     return poly_sinogram
