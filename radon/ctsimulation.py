@@ -51,12 +51,7 @@ def backproject(sinogram, angle_rad, center=None):
 
     return img
 
-
-class FBPFilter(enum.Enum):
-    NoFilter = 0
-    CosineFilter = 1
-
-def filtered_backproject(sinogram, angles, center=None, npad=0):
+def filtered_backproject(sinogram, angles, center=None, npad=0, filter_type="cosine"):
 
     if npad:
         sinogram = np.pad(sinogram, ((npad,0),(0,0)), 'constant')
@@ -64,18 +59,12 @@ def filtered_backproject(sinogram, angles, center=None, npad=0):
     fradon = np.fft.fft(sinogram, axis=0)
     freqs = np.fft.fftfreq(sinogram.shape[0])
 
-
-    filter_type = FBPFilter.CosineFilter
-
     freq_filter = np.abs(freqs)
-    if filter_type == FBPFilter.NoFilter:
+    
+    if filter_type is None:
         pass
-    elif filter_type == FBPFilter.CosineFilter: # 
+    elif filter_type == "cosine":
         freq_filter *= 0.5*(1 + np.cos(2*np.pi*freqs))
-        # freq_filter = np.cos(2*np.pi*freqs)
-        # import matplotlib.pyplot as plt
-        # plt.plot(freqs, freq_filter, '.')
-        # raise Exception("Damn!")
 
     sinogram_sharp = np.fft.ifft(freq_filter[:,np.newaxis] * fradon, axis=0)
 
