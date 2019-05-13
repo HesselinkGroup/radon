@@ -46,6 +46,44 @@ def backproject(sinogram, angle_rad, center=None):
 def filtered_backproject(sinogram, angle_rad, center=None):
     return _general_backproject(ctsimulation.filtered_backproject, sinogram, angle_rad, center)
 
+# TODO: RENAME THIS FUNCTION and move it.  Its job is to apply nonidealities to a theoretical mono sinogram.
+def mono_sinogram(sinogram, src_intensity_keV, src_keV, poisson=False, quantization_bits=None, min_energy_keV=None):
+    """Calculate sinogram with noise, quantization and logarithm artifacts from theoretical monoenergetic sinogram.
+    
+    Args:
+        sinogram: monoenergetic sinogram (such that transmission = exp(-sinogram))
+        src_intensity_keV: source intensity per pixel
+        src_keV: energy of a single photon
+        poisson (bool): whether to generate photon Poisson noise
+        quantization_bits: (optional) number of bits for simulated detector quantization (default: no quantization)
+        min_energy_keV: (optional) clipping value for sinogram (default: 1e-3*src_keV[0], i.e. a thousandth of a photon)
+    
+    Returns:
+        np.ndarray: monoenergetic sinogram (unitless)
+    """
+
+    if quantization_bits is not None:
+        raise Exception("Detector quantization is not implemented.")
+    
+    transmission = np.exp(-sinogram)
+    src_num_photons = src_intensity_keV / src_keV
+    observed_photons = transmission * src_num_photons
+
+    if poisson:
+        observed_photons = scipy.stats.poisson.rvs(observed_photons)
+
+    observed_energy_keV = observed_photons * src_keV
+    flood_energy_keV = src_num_photons * src_keV
+
+    if min_energy_keV is None:
+        min_energy_keV = 1e-3*src_keV
+
+    mono_sinogram = np.log(flood_energy_keV) - np.log(np.maximum(observed_energy_keV, min_energy_keV))
+
+    return mono_sinogram
+
+
+
 def poly_sinogram(sinograms, src_intensity_per_bin_keV, src_keV, poisson=False, quantization_bits=None, min_energy_keV=None):
     """Calculate polyenergetic sinogram from monoenergetic sinograms in several energy intervals.
     
@@ -68,9 +106,9 @@ def poly_sinogram(sinograms, src_intensity_per_bin_keV, src_keV, poisson=False, 
         raise Exception("Detector quantization is not implemented.")
     
     transmission = np.exp(-sinograms)
-    src_num_photons_per_bin = src_intensity_per_bin_keV / src_keV # YES
+    src_num_photons_per_bin = src_intensity_per_bin_keV / src_keV
     
-    observed_photons = transmission * src_num_photons_per_bin[:,None,None] # YES
+    observed_photons = transmission * src_num_photons_per_bin[:,None,None]
     if poisson:
         observed_photons = scipy.stats.poisson.rvs(observed_photons)
     
@@ -84,3 +122,9 @@ def poly_sinogram(sinograms, src_intensity_per_bin_keV, src_keV, poisson=False, 
     poly_sinogram = np.log(flood_total_energy_keV) - np.log(np.maximum(observed_total_energy_keV, min_energy_keV))
     
     return poly_sinogram
+
+
+
+
+
+
