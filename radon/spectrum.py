@@ -18,6 +18,10 @@ class Spectrum:
     def __init__(self, keV, intensity):
         """
         Create a spectrum from tabulated energies and intensities.
+
+        Args:
+            keV (array-like): photon energies of source (keV)
+            intensity (array-like): energy per detected ray (keV)
         """
         self.keV = keV
         self.src_intensity = intensity
@@ -97,7 +101,7 @@ class Spectrum:
             energy_keV: array of photon energies (keV) (optional)
         
         Returns:
-            transmitted intensity
+            transmitted intensity (keV)
         """
         intensity = self.src_intensity * self.attenuation
 
@@ -120,8 +124,8 @@ class Spectrum:
             photons_per_ray: (optional) 
         
         Returns:
-            np.ndarray: summed intensity in each bin
-            np.ndarray: energy at the center of each bin
+            np.ndarray: summed intensity in each bin (keV)
+            np.ndarray: energy at the center of each bin (keV)
         """
         
         intensity = self.src_intensity * self.attenuation

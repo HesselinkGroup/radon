@@ -51,8 +51,21 @@ def backproject(sinogram, angle_rad, center=None):
 
     return img
 
-def filtered_backproject(sinogram, angles, center=None, npad=0, filter_type="cosine"):
+def filtered_sinogram(sinogram, angles, npad=0, filter_type="cosine"):
+    """Perform convolutional filtering of sinogram along spatial direction.
 
+    Sinogram filtering is a stage of the filtered back-projection algorithm for
+    CT reconstruction.
+
+    Args:
+        sinogram (array): sinogram to filter, indexed [r, angle]
+        angles (array): list of projection angles
+        npad (int): amount of zero padding to apply during filtering
+        filter_type (str): "cosine", "cosinesquared", "hilbert", or "integral"
+
+    Returns:
+        array: the filtered sinogram
+    """
     if npad:
         sinogram = np.pad(sinogram, ((npad,0),(0,0)), 'constant')
 
@@ -65,11 +78,31 @@ def filtered_backproject(sinogram, angles, center=None, npad=0, filter_type="cos
         pass
     elif filter_type == "cosine":
         freq_filter *= 0.5*(1 + np.cos(2*np.pi*freqs))
+    elif filter_type == "cosinesquared":
+        freq_filter *= (0.5*(1 + np.cos(2*np.pi*freqs)))**2
+    elif filter_type == "hilbert":
+        freq_filter = np.sign(freqs) / (2j*np.pi)
+    elif filter_type == "integral":
+        freq_filter = np.zeros_like(freq_filter, dtype=np.complex)
+        freq_filter[1:] = 1.0 / (2j*np.pi*freqs[1:])
+        freq_filter[0] = 0.0
+    else:
+        raise Exception(f"API Error: filter_type {filter_type} is not valid")
 
     sinogram_sharp = np.fft.ifft(freq_filter[:,np.newaxis] * fradon, axis=0)
 
+    # if filter_type == "hilbert" or filter_type == "integral":
+    #     # Fix phase offset...
+    #     sinogram_sharp -= 0.5*(sinogram_sharp[0,:] + sinogram_sharp[-1,:])
+
     if npad:
         sinogram_sharp = sinogram_sharp[npad:,:]
+
+    return sinogram_sharp
+
+def filtered_backproject(sinogram, angles, center=None, npad=0, filter_type="cosine"):
+
+    sinogram_sharp = filtered_sinogram(sinogram, angles, npad, filter_type)
 
     zz = backproject(sinogram_sharp.real, angles, center=center) * np.pi / len(angles)
 
@@ -78,16 +111,15 @@ def filtered_backproject(sinogram, angles, center=None, npad=0, filter_type="cos
     xx,yy = np.meshgrid(xs,xs)
     x0 = zz.shape[0]/2.0
     zz[(xx-x0)**2 + (yy-x0)**2 > x0**2] = 0.0
-    
+
     # Volume correction:
     
-    dc_sinogram = np.mean(sinogram.sum(0))
-    dc_zz = zz.sum()
-    zz += (dc_sinogram - dc_zz) / zz.size
-
-    zz[(xx-x0)**2 + (yy-x0)**2 > x0**2] = 0.0
-
-    # zz = zz[npad:-npad, npad:-npad]
+    do_volume_correction=True
+    if do_volume_correction:
+        dc_sinogram = np.mean(sinogram.sum(0))
+        dc_zz = zz.sum()
+        zz += (dc_sinogram - dc_zz) / zz.size
+        zz[(xx-x0)**2 + (yy-x0)**2 > x0**2] = 0.0
     
     return zz
 

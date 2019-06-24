@@ -61,7 +61,7 @@ def mono_sinogram(sinogram, src_intensity_keV, src_keV, poisson=False, quantizat
     Returns:
         np.ndarray: monoenergetic sinogram (unitless)
     """
-
+    
     if quantization_bits is not None:
         raise Exception("Detector quantization is not implemented.")
     
