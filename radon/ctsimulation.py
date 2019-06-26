@@ -67,23 +67,21 @@ def filtered_sinogram(sinogram, angles, npad=0, filter_type="cosine"):
         array: the filtered sinogram
     """
     if npad:
-        sinogram = np.pad(sinogram, ((npad,0),(0,0)), 'constant')
+        sinogram = np.pad(sinogram, ((npad,npad),(0,0)), 'constant')
 
     fradon = np.fft.fft(sinogram, axis=0)
     freqs = np.fft.fftfreq(sinogram.shape[0])
 
-    freq_filter = np.abs(freqs)
-    
     if filter_type is None:
-        pass
+        freq_filter = np.abs(freqs)
     elif filter_type == "cosine":
-        freq_filter *= 0.5*(1 + np.cos(2*np.pi*freqs))
+        freq_filter = np.abs(freqs)*0.5*(1 + np.cos(2*np.pi*freqs))
     elif filter_type == "cosinesquared":
-        freq_filter *= (0.5*(1 + np.cos(2*np.pi*freqs)))**2
+        freq_filter = np.abs(freqs)*(0.5*(1 + np.cos(2*np.pi*freqs)))**2
     elif filter_type == "hilbert":
         freq_filter = np.sign(freqs) / (2j*np.pi)
     elif filter_type == "integral":
-        freq_filter = np.zeros_like(freq_filter, dtype=np.complex)
+        freq_filter = np.zeros_like(freqs, dtype=np.complex)
         freq_filter[1:] = 1.0 / (2j*np.pi*freqs[1:])
         freq_filter[0] = 0.0
     else:
@@ -91,12 +89,13 @@ def filtered_sinogram(sinogram, angles, npad=0, filter_type="cosine"):
 
     sinogram_sharp = np.fft.ifft(freq_filter[:,np.newaxis] * fradon, axis=0)
 
-    # if filter_type == "hilbert" or filter_type == "integral":
-    #     # Fix phase offset...
-    #     sinogram_sharp -= 0.5*(sinogram_sharp[0,:] + sinogram_sharp[-1,:])
+    if filter_type == "hilbert" or filter_type == "integral":
+        # The Hilbert filter and the integral filter both set the DC part
+        # to zero.
+        sinogram_sharp -= 0.5*(sinogram_sharp[0,:] + sinogram_sharp[-1,:])
 
     if npad:
-        sinogram_sharp = sinogram_sharp[npad:,:]
+        sinogram_sharp = sinogram_sharp[npad:-npad,:]
 
     return sinogram_sharp
 
@@ -114,7 +113,10 @@ def filtered_backproject(sinogram, angles, center=None, npad=0, filter_type="cos
 
     # Volume correction:
     
-    do_volume_correction=True
+    do_volume_correction = True
+    if filter_type == "hilbert":
+        # The Hilbert
+        do_volume_correction = False
     if do_volume_correction:
         dc_sinogram = np.mean(sinogram.sum(0))
         dc_zz = zz.sum()

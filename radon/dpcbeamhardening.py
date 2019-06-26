@@ -57,9 +57,6 @@ class DPCBeamHardeningCorrection:
         mass_slope = self.lookup_mass_slope(phase_poly, mass_thickness)
         phase_mono = self.calc_phi(mass_slope, self.mono_keV)[0]
         
-        
-        return self._impl.correct_sinograms_implementation(intensity_poly, phase_poly)
-
         return intensity_mono, phase_mono
 
 
@@ -158,5 +155,46 @@ class DPCBeamHardeningCorrection:
         mass_slope.shape = phi.shape
         return mass_slope
 
+##
 
+# corrector = DPCBeamHardeningCorrection(d_12, p2, xrl.water, bin_keV, bin_intensity, bin_visibility, design_keV)
+
+# def test_calc_transmission():
+#     # Only works in water...
+
+#     ii = int(len(xs)/2)
+#     jj = int(len(angles)/2)
     
+#     intensity = corrector.calc_transmission(mass_thickness_sinogram[ii,jj], bin_keV).ravel() * bin_intensity
+#     intensity_pixel = intensity_sinogram[:,ii,jj]
+    
+#     np.testing.assert_allclose(intensity, intensity_pixel)
+    
+# def test_calc_phi():
+#     """Test the calc_phi() function on a water phantom.
+#     """
+    
+#     # DO NOT USE THE MIDDLE
+#     # Stop testing values that are supposed to be zero!!!
+    
+#     ii = int(len(xs)/2 + 5)
+#     jj = int(len(angles)/2 - 4)
+    
+#     phi = corrector.calc_phi(mass_slope_sinogram[ii,jj], bin_keV).ravel()
+#     phi_pixel = dpc_sinogram[:,ii,jj]
+    
+#     np.testing.assert_allclose(phi, phi_pixel)
+    
+# def test_calc_poly_phi():
+#     """Test the calc_poly_phi() function on a water phantom
+#     """
+    
+#     ii = int(len(xs)*0.3)
+#     jj = int(len(angles)/2)
+    
+#     phi = corrector.calc_poly_phi(mass_thickness_sinogram[ii,jj], mass_slope_sinogram[ii,jj]).ravel()
+#     phi2 = calc_poly_phi(mass_thickness_sinogram[ii,jj], mass_slope_sinogram[ii,jj]).ravel()
+#     phi_pixel = dpc_poly_sinogram[ii,jj]
+    
+#     np.testing.assert_allclose(phi, phi_pixel)
+
